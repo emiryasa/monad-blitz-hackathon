@@ -1,5 +1,5 @@
 import { eventRepository } from "@/lib/events/repository";
-import type { CheckInRecord, PortalTicket, Reward } from "./types";
+import type { CheckInRecord, EventDraft, PortalTicket, Reward } from "./types";
 
 const tickets: PortalTicket[] = [
   { id: "ticket-001", eventId: "monad-builders-night", tokenId: "#0001", eventName: "Monad Builders Night", startsAt: "2026-10-19T18:30:00.000Z", venue: "DasDas, Istanbul", image: "/computer.png", price: "0.05", currency: "MON", status: "ACTIVE" },
@@ -13,6 +13,7 @@ const rewards: Reward[] = [
   { label: "TRY AGAIN", description: "A fresh spin is available tomorrow." },
   { label: "STICKET NFT", description: "An exclusive collectible for your wallet." },
 ];
+const drafts: EventDraft[] = [];
 
 export const portalRepository = {
   async listTickets() { return tickets; },
@@ -37,4 +38,23 @@ export const portalRepository = {
     return ticket;
   },
   async spin() { return rewards[Math.floor(Math.random() * rewards.length)]; },
+  async createEvent(draft: Omit<EventDraft, "id" | "status">) {
+    const event = { ...draft, id: `draft-${Date.now()}`, status: "awaiting_contract" as const };
+    drafts.unshift(event);
+    return event;
+  },
+  async listDrafts() { return drafts; },
+  async listMarketplace() { return tickets.filter((ticket) => ticket.status === "LISTED"); },
+  async buyListing(id: string) {
+    const ticket = tickets.find((item) => item.id === id && item.status === "LISTED");
+    if (!ticket) return null;
+    ticket.status = "ACTIVE";
+    ticket.listedPrice = undefined;
+    return ticket;
+  },
+  async transferTicket(id: string, recipient: string) {
+    const ticket = tickets.find((item) => item.id === id);
+    if (!ticket || ticket.status === "USED") return null;
+    return { ticket, recipient, status: "awaiting_contract" as const };
+  },
 };
