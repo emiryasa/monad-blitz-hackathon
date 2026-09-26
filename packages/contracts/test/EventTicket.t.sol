@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { Test } from "forge-std/Test.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { EventFactory } from "../src/EventFactory.sol";
 import { EventTicket } from "../src/EventTicket.sol";
 
@@ -191,6 +192,72 @@ contract EventTicketTest is Test {
 
         assertEq(organizer.balance, balanceBefore + PRICE * 2);
         assertEq(address(ticket).balance, 0);
+    }
+
+    function testOnlyOrganizerCanCheckInTicket() external {
+        vm.prank(buyer);
+        uint256 tokenId = ticket.buyTicket{ value: PRICE }();
+
+        vm.prank(buyer);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, buyer));
+        ticket.checkIn(tokenId);
+    }
+
+    function testTicketCannotBeCheckedInTwice() external {
+        vm.prank(buyer);
+        uint256 tokenId = ticket.buyTicket{ value: PRICE }();
+
+        vm.startPrank(organizer);
+        ticket.checkIn(tokenId);
+        vm.expectRevert(abi.encodeWithSelector(EventTicket.TicketAlreadyUsed.selector, tokenId));
+        ticket.checkIn(tokenId);
+        vm.stopPrank();
+    }
+
+    function testOnlyOrganizerCanWithdrawPrimarySaleProceeds() external {
+        vm.prank(buyer);
+        ticket.buyTicket{ value: PRICE }();
+
+        vm.prank(buyer);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, buyer));
+        ticket.withdrawProceeds();
+    }
+
+    function testWithdrawRevertsWhenThereAreNoProceeds() external {
+        vm.prank(organizer);
+        vm.expectRevert(EventTicket.NothingToWithdraw.selector);
+        ticket.withdrawProceeds();
+    }
+
+    function testFactoryRejectsZeroSupplyAndZeroPrice() external {
+        EventTicket.EventConfig memory config = _defaultConfig();
+        config.maxSupply = 0;
+
+        vm.prank(organizer);
+        vm.expectRevert(EventTicket.InvalidSupply.selector);
+        factory.createEvent(config);
+
+        config = _defaultConfig();
+        config.primaryPrice = 0;
+
+        vm.prank(organizer);
+        vm.expectRevert(EventTicket.InvalidPrimaryPrice.selector);
+        factory.createEvent(config);
+    }
+
+    function testFuzzBatchPurchaseMintsExactQuantity(uint8 rawQuantity) external {
+        uint256 quantity = bound(rawQuantity, 1, MAX_SUPPLY);
+
+        vm.prank(buyer);
+        uint256 firstTokenId = ticket.buyTickets{ value: PRICE * quantity }(quantity);
+
+        assertEq(firstTokenId, 1);
+        assertEq(ticket.totalMinted(), quantity);
+        assertEq(ticket.ticketsAvailable(), MAX_SUPPLY - quantity);
+        assertEq(address(ticket).balance, PRICE * quantity);
+        for (uint256 tokenId = 1; tokenId <= quantity; ++tokenId) {
+            assertEq(ticket.ownerOf(tokenId), buyer);
+        }
     }
 
     function _defaultConfig() private pure returns (EventTicket.EventConfig memory) {

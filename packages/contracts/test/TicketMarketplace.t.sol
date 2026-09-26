@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { Test } from "forge-std/Test.sol";
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import { EventFactory } from "../src/EventFactory.sol";
 import { EventTicket } from "../src/EventTicket.sol";
 import { TicketMarketplace } from "../src/TicketMarketplace.sol";
@@ -247,6 +248,134 @@ contract TicketMarketplaceTest is Test {
         marketplace.listTicket(unsupportedCollection, TOKEN_ID, LISTING_PRICE, LISTING_EXPIRY);
     }
 
+    function testTicketCannotBeListedTwice() external {
+        _listDefault();
+
+        vm.prank(seller);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TicketMarketplace.AlreadyListed.selector, address(ticket), TOKEN_ID
+            )
+        );
+        marketplace.listTicket(address(ticket), TOKEN_ID, LISTING_PRICE, LISTING_EXPIRY);
+    }
+
+    function testListingRevertsWithZeroPrice() external {
+        vm.prank(seller);
+        vm.expectRevert(TicketMarketplace.InvalidPrice.selector);
+        marketplace.listTicket(address(ticket), TOKEN_ID, 0, LISTING_EXPIRY);
+    }
+
+    function testListingRevertsAfterEventStarts() external {
+        vm.warp(EVENT_START);
+
+        vm.prank(seller);
+        vm.expectRevert(
+            abi.encodeWithSelector(TicketMarketplace.EventAlreadyStarted.selector, EVENT_START)
+        );
+        marketplace.listTicket(address(ticket), TOKEN_ID, LISTING_PRICE, LISTING_EXPIRY);
+    }
+
+    function testOnlySellerCanUpdateListing() external {
+        _listDefault();
+
+        vm.prank(other);
+        vm.expectRevert(
+            abi.encodeWithSelector(TicketMarketplace.NotListingSeller.selector, other, seller)
+        );
+        marketplace.updateListing(address(ticket), TOKEN_ID, 1.75 ether, 25 days);
+    }
+
+    function testPurchaseRevertsWhenApprovalWasRevoked() external {
+        _listDefault();
+
+        vm.prank(seller);
+        ticket.approve(address(0), TOKEN_ID);
+
+        vm.prank(buyer);
+        vm.expectRevert(
+            abi.encodeWithSelector(TicketMarketplace.MarketplaceNotApproved.selector, TOKEN_ID)
+        );
+        marketplace.buyListing{ value: LISTING_PRICE }(address(ticket), TOKEN_ID);
+    }
+
+    function testPurchaseRevertsAfterTicketCheckIn() external {
+        _listDefault();
+
+        vm.prank(organizer);
+        ticket.checkIn(TOKEN_ID);
+
+        vm.prank(buyer);
+        vm.expectRevert(
+            abi.encodeWithSelector(TicketMarketplace.TicketAlreadyUsed.selector, TOKEN_ID)
+        );
+        marketplace.buyListing{ value: LISTING_PRICE }(address(ticket), TOKEN_ID);
+    }
+
+    function testPurchaseRevertsAfterEventStarts() external {
+        _listDefault();
+        vm.warp(EVENT_START);
+
+        vm.prank(buyer);
+        vm.expectRevert(
+            abi.encodeWithSelector(TicketMarketplace.EventAlreadyStarted.selector, EVENT_START)
+        );
+        marketplace.buyListing{ value: LISTING_PRICE }(address(ticket), TOKEN_ID);
+    }
+
+    function testValidListingCannotBeInvalidated() external {
+        _listDefault();
+
+        vm.prank(other);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TicketMarketplace.ListingStillValid.selector, address(ticket), TOKEN_ID
+            )
+        );
+        marketplace.invalidateListing(address(ticket), TOKEN_ID);
+    }
+
+    function testWithdrawRevertsWhenAccountHasNoProceeds() external {
+        vm.prank(other);
+        vm.expectRevert(TicketMarketplace.NothingToWithdraw.selector);
+        marketplace.withdrawProceeds();
+    }
+
+    function testPurchaseCannotBeReenteredFromTokenReceiver() external {
+        _listDefault();
+
+        ReentrantMarketplaceBuyer attacker =
+            new ReentrantMarketplaceBuyer(marketplace, address(ticket), TOKEN_ID, LISTING_PRICE);
+        vm.deal(address(attacker), LISTING_PRICE * 2);
+
+        attacker.attack();
+
+        assertTrue(attacker.reentryAttempted());
+        assertFalse(attacker.reentrySucceeded());
+        assertEq(ticket.ownerOf(TOKEN_ID), address(attacker));
+
+        uint256 creatorFee = LISTING_PRICE * CREATOR_FEE_BPS / 10_000;
+        assertEq(marketplace.pendingWithdrawals(organizer), creatorFee);
+        assertEq(marketplace.pendingWithdrawals(seller), LISTING_PRICE - creatorFee);
+        assertEq(address(marketplace).balance, LISTING_PRICE);
+    }
+
+    function testFuzzSaleAccountingInvariant(uint96 rawPrice) external {
+        uint256 price = bound(rawPrice, PRIMARY_PRICE, MAX_RESALE_PRICE);
+
+        vm.prank(seller);
+        marketplace.listTicket(address(ticket), TOKEN_ID, price, LISTING_EXPIRY);
+
+        vm.prank(buyer);
+        marketplace.buyListing{ value: price }(address(ticket), TOKEN_ID);
+
+        uint256 creatorProceeds = marketplace.pendingWithdrawals(organizer);
+        uint256 sellerProceeds = marketplace.pendingWithdrawals(seller);
+        assertEq(creatorProceeds + sellerProceeds, price);
+        assertEq(address(marketplace).balance, price);
+        assertEq(ticket.ownerOf(TOKEN_ID), buyer);
+    }
+
     function _listDefault() private {
         vm.prank(seller);
         marketplace.listTicket(address(ticket), TOKEN_ID, LISTING_PRICE, LISTING_EXPIRY);
@@ -265,4 +394,44 @@ contract TicketMarketplaceTest is Test {
             maxResalePrice: MAX_RESALE_PRICE
         });
     }
+}
+
+contract ReentrantMarketplaceBuyer is IERC721Receiver {
+    TicketMarketplace private immutable _marketplace;
+    address private immutable _collection;
+    uint256 private immutable _tokenId;
+    uint256 private immutable _price;
+
+    bool public reentryAttempted;
+    bool public reentrySucceeded;
+
+    constructor(
+        TicketMarketplace marketplace_,
+        address collection_,
+        uint256 tokenId_,
+        uint256 price_
+    ) {
+        _marketplace = marketplace_;
+        _collection = collection_;
+        _tokenId = tokenId_;
+        _price = price_;
+    }
+
+    function attack() external {
+        _marketplace.buyListing{ value: _price }(_collection, _tokenId);
+    }
+
+    function onERC721Received(address, address, uint256, bytes calldata)
+        external
+        override
+        returns (bytes4)
+    {
+        reentryAttempted = true;
+        (reentrySucceeded,) = address(_marketplace).call{ value: _price }(
+            abi.encodeCall(TicketMarketplace.buyListing, (_collection, _tokenId))
+        );
+        return IERC721Receiver.onERC721Received.selector;
+    }
+
+    receive() external payable { }
 }
