@@ -3,13 +3,15 @@ pragma solidity ^0.8.24;
 
 import { Script } from "forge-std/Script.sol";
 import { EventFactory } from "../src/EventFactory.sol";
+import { TicketMarketplace } from "../src/TicketMarketplace.sol";
 
 contract Deploy is Script {
-    function run() external returns (EventFactory factory) {
+    function run() external returns (EventFactory factory, TicketMarketplace marketplace) {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
         vm.startBroadcast(deployerPrivateKey);
         factory = new EventFactory();
+        marketplace = new TicketMarketplace(address(factory));
         vm.stopBroadcast();
     }
 }

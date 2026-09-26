@@ -30,6 +30,7 @@ contract EventFactory {
 
     EventInfo[] private _events;
     mapping(address organizer => address[] tickets) private _organizerEvents;
+    mapping(address ticket => bool registered) public isEventTicket;
 
     function createEvent(EventTicket.EventConfig calldata config)
         external
@@ -56,6 +57,7 @@ contract EventFactory {
             })
         );
         _organizerEvents[msg.sender].push(ticketAddress);
+        isEventTicket[ticketAddress] = true;
 
         // Deployment has no untrusted callback; emit only after the contract address is known.
         // forge-lint: disable-next-line(reentrancy-events)
