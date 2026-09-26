@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Monad Blitz | On-chain etkinlik biletleri",
+  title: "Sticket | On-chain ticketing",
   description: "Discover events and own tickets on Monad.",
 };
 

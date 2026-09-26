@@ -1,6 +1,6 @@
-# Monad Blitz
+# Sticket
 
-Monad Blitz is a Monad-native event ticketing application.
+Sticket is a Monad-native event ticketing application.
 
 ## Getting started
 
