@@ -2,24 +2,15 @@
   "name": "monad-blitz-hackathon",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "next": "16.3.6",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
-  },
-  "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.6",
-    "typescript": "^5"
+    "dev": "bun --filter @monad-blitz/web dev",
+    "build": "bun --filter @monad-blitz/web build",
+    "lint": "bun --filter @monad-blitz/web lint",
+    "typecheck": "bun --filter @monad-blitz/web typecheck"
   },
   "packageManager": "bun@1.3.2",
   "ignoreScripts": [
