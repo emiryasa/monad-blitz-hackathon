@@ -16,7 +16,8 @@ forge test
 ## Yapı
 
 - `EventFactory.sol`: Organizatörlerin etkinlik oluşturduğu ve etkinlikleri indeksleyen fabrika.
-- `EventTicket.sol`: Bir etkinliğe ait ERC-721 bilet, birincil satış ve check-in mantığı.
+- `EventTicket.sol`: Bir etkinliğe ait ERC-721 bilet, zaman kontrollü birincil satış,
+  toplu alım, yeniden satış politikası ve check-in mantığı.
 - `Deploy.s.sol`: Factory sözleşmesini ağa deploy eden script.
 
 ## Deploy

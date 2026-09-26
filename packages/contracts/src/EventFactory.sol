@@ -9,35 +9,57 @@ contract EventFactory {
     struct EventInfo {
         address ticket;
         address organizer;
+        string name;
+        string symbol;
+        string eventMetadataURI;
+        uint64 salesStartAt;
+        uint64 eventStartsAt;
+        uint256 maxSupply;
+        uint256 primaryPrice;
+        uint16 creatorFeeBps;
+        uint256 maxResalePrice;
     }
 
     event EventCreated(
-        uint256 indexed eventId, address indexed organizer, address indexed ticket, string name
+        uint256 indexed eventId,
+        address indexed organizer,
+        address indexed ticket,
+        string name,
+        uint64 eventStartsAt
     );
 
     EventInfo[] private _events;
     mapping(address organizer => address[] tickets) private _organizerEvents;
 
-    function createEvent(
-        string calldata name,
-        string calldata symbol,
-        string calldata eventMetadataURI,
-        uint256 maxSupply,
-        uint256 primaryPrice
-    ) external returns (address ticketAddress) {
-        EventTicket ticket = new EventTicket(
-            name, symbol, eventMetadataURI, msg.sender, maxSupply, primaryPrice
-        );
+    function createEvent(EventTicket.EventConfig calldata config)
+        external
+        returns (address ticketAddress)
+    {
+        EventTicket ticket = new EventTicket(config, msg.sender);
 
         ticketAddress = address(ticket);
         uint256 eventId = _events.length;
 
-        _events.push(EventInfo({ ticket: ticketAddress, organizer: msg.sender }));
+        _events.push(
+            EventInfo({
+                ticket: ticketAddress,
+                organizer: msg.sender,
+                name: config.name,
+                symbol: config.symbol,
+                eventMetadataURI: config.eventMetadataURI,
+                salesStartAt: config.salesStartAt,
+                eventStartsAt: config.eventStartsAt,
+                maxSupply: config.maxSupply,
+                primaryPrice: config.primaryPrice,
+                creatorFeeBps: config.creatorFeeBps,
+                maxResalePrice: config.maxResalePrice
+            })
+        );
         _organizerEvents[msg.sender].push(ticketAddress);
 
         // Deployment has no untrusted callback; emit only after the contract address is known.
         // forge-lint: disable-next-line(reentrancy-events)
-        emit EventCreated(eventId, msg.sender, ticketAddress, name);
+        emit EventCreated(eventId, msg.sender, ticketAddress, config.name, config.eventStartsAt);
     }
 
     function eventCount() external view returns (uint256) {
