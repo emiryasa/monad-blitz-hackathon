@@ -1,4 +1,4 @@
-export type EventCategory = "music" | "technology" | "art" | "community";
+export type EventCategory = "music" | "technology" | "conference" | "sports" | "art" | "theater" | "festival" | "community" | "other";
 
 export type EventStatus = "on_sale" | "sold_out" | "upcoming";
 
