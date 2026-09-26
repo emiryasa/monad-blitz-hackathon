@@ -16,6 +16,11 @@ export interface EventSummary {
   availableTickets: number;
   totalTickets: number;
   image: string;
+  contractAddress?: `0x${string}`;
+  organizer?: `0x${string}`;
+  symbol?: string;
+  creatorFeeBps?: number;
+  isDemo?: boolean;
 }
 
 export interface EventRepository {

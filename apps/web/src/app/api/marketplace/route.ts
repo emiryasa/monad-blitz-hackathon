@@ -1,3 +1,3 @@
-import { portalRepository } from "@/lib/portal/repository";
+import { listMarketplaceTickets } from "@/lib/chain/tickets";
 
-export async function GET() { return Response.json({ data: await portalRepository.listMarketplace() }); }
+export async function GET() { return Response.json({ data: await listMarketplaceTickets() }); }

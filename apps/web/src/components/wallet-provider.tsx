@@ -1,9 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { ensureMonadNetwork, getInjectedProvider } from "@/lib/chain/client";
 
 type WalletState = { address: string | null; connecting: boolean; connect: () => Promise<void>; disconnect: () => void };
-type EthereumProvider = { request: (args: { method: string }) => Promise<string[]> };
 
 const WalletContext = createContext<WalletState | null>(null);
 
@@ -19,10 +19,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(async () => {
     setConnecting(true);
     try {
-      const provider = (window as typeof window & { ethereum?: EthereumProvider }).ethereum;
-      if (!provider) throw new Error("Install MetaMask or Rabby to connect a wallet.");
-      const [account] = await provider.request({ method: "eth_requestAccounts" });
+      const provider = getInjectedProvider();
+      const accounts = await provider.request({ method: "eth_requestAccounts" }) as string[];
+      const account = accounts[0];
       if (!account) throw new Error("No wallet account was selected.");
+      await ensureMonadNetwork(provider);
       window.localStorage.setItem("sticket.wallet", account);
       setAddress(account);
     } finally {
