@@ -14,12 +14,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Monad Blitz | On-chain etkinlik biletleri",
-  description: "Monad üzerinde etkinlikleri keşfet ve biletini zincir üzerinde al.",
+  description: "Discover events and own tickets on Monad.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="tr" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>{children}</body>
     </html>
   );
