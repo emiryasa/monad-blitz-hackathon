@@ -1,69 +1,10 @@
-import Image from "next/image";
+import Link from "next/link";
+import { AppShell, Icon } from "../components/app-shell";
 import styles from "./page.module.css";
 
+const highlights = [["12", "Yaklaşan etkinlik"], ["3.4K", "Benzersiz bilet"], ["0%", "Platform komisyonu"]];
+const events = [["LIVE\nNOW", "19 EKİM · İSTANBUL", "Monadic Sounds", "0.08 MON", "purple"], ["BUILD\nFAST", "25 EKİM · İSTANBUL", "Monad Builders Night", "Ücretsiz", "orange"], ["ART\nONCHAIN", "02 KASIM · ANKARA", "Digital Art Assembly", "0.04 MON", "blue"]];
+
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+  return <AppShell><section className={styles.hero}><div className={styles.heroCopy}><p className={styles.eyebrow}><span /> Monad üzerinde biletleme</p><h1>Unutulmayacak<br /><em>anlar</em> için biletler.</h1><p className={styles.description}>Etkinlikleri keşfet, biletini zincir üzerinde al ve her anı koleksiyonunun bir parçası yap.</p><div className={styles.heroActions}><Link className={styles.primaryAction} href="/events">Etkinlikleri keşfet <span>→</span></Link><Link className={styles.secondaryAction} href="/create"><Icon name="plus" size={17} /> Etkinlik oluştur</Link></div></div><div className={styles.art} aria-label="Monad Blitz bilet görseli"><div className={styles.orbitOne} /><div className={styles.orbitTwo} /><div className={styles.ticket}><div className={styles.ticketTop}><span>MONAD BLITZ</span><span>01</span></div><div className={styles.ticketTitle}>YOUR NEXT<br />MOMENT</div><div className={styles.ticketFoot}><span>MONAD TESTNET</span><span>✦</span></div></div><div className={styles.spark}>✦</div></div></section><section className={styles.stats} aria-label="Monad Blitz istatistikleri">{highlights.map(([value, label]) => <div key={label}><strong>{value}</strong><span>{label}</span></div>)}</section><section className={styles.discovery}><div className={styles.sectionHeading}><div><p className={styles.kicker}>KEŞFET</p><h2>Senin için seçtiklerimiz</h2></div><Link href="/events">Tüm etkinlikler <span>→</span></Link></div><div className={styles.categoryRow}>{["Müzik", "Teknoloji", "Sanat", "Spor", "Topluluk"].map((category, index) => <button className={index === 0 ? styles.activeCategory : ""} type="button" key={category}>{category}</button>)}</div><div className={styles.previewGrid}>{events.map(([art, date, title, price, color]) => <article className={styles.eventPreview} key={title}><div className={`${styles.eventArt} ${styles[color]}`}>{art.split("\n").map((line) => <span key={line}>{line}<br /></span>)}</div><p>{date}</p><h3>{title}</h3><span>{price}</span></article>)}</div></section></AppShell>;
 }
